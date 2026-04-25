@@ -1,0 +1,36 @@
+package com.groupmatch.app.user;
+
+import com.groupmatch.app.domain.user.Gender;
+import com.groupmatch.app.domain.user.UserEntity;
+
+import java.time.LocalDate;
+import java.util.UUID;
+
+public class UserProfileResponse {
+
+    private UUID uuid;
+    private String email;
+    private String name;
+    private Gender gender;
+    private LocalDate birthDate;
+    private Integer searchRadiusKm;
+    private Integer dailyLikesLeft;
+
+    public UserProfileResponse(UserEntity user) {
+        this.uuid = user.getUuid();
+        this.email = user.getEmail();
+        this.name = user.getName();
+        this.gender = user.getGender();
+        this.birthDate = user.getBirthDate();
+        this.searchRadiusKm = user.getSearchRadiusKm();
+        this.dailyLikesLeft = user.getDailyLikesLeft();
+    }
+
+    public UUID getUuid() { return uuid; }
+    public String getEmail() { return email; }
+    public String getName() { return name; }
+    public Gender getGender() { return gender; }
+    public LocalDate getBirthDate() { return birthDate; }
+    public Integer getSearchRadiusKm() { return searchRadiusKm; }
+    public Integer getDailyLikesLeft() { return dailyLikesLeft; }
+}

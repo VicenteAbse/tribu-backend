@@ -1,7 +1,8 @@
 package com.groupmatch.app.domain.group;
 
+import com.groupmatch.app.domain.user.UserEntity;
 import jakarta.persistence.*;
-
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
@@ -18,33 +19,69 @@ public class GroupEntity {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 500)
     private String description;
 
-    protected GroupEntity() {
-    }
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "creator_id", nullable = false)
+    private UserEntity creator;
 
-    public GroupEntity(String name, String description) {
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private GenderPreference genderPreference;
+
+    @Column(nullable = false)
+    private Integer minMembers;
+
+    @Column(nullable = false)
+    private Integer maxMembers;
+
+    @Column(nullable = false)
+    private Integer likesCount = 0;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private GroupStatus status = GroupStatus.OPEN;
+
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    // reserved for future geolocation
+    private Double latitude;
+    private Double longitude;
+
+    protected GroupEntity() {}
+
+    public GroupEntity(String name, String description, UserEntity creator,
+                       GenderPreference genderPreference, Integer minMembers, Integer maxMembers) {
         this.uuid = UUID.randomUUID();
         this.name = name;
         this.description = description;
+        this.creator = creator;
+        this.genderPreference = genderPreference;
+        this.minMembers = minMembers;
+        this.maxMembers = maxMembers;
+        this.createdAt = LocalDateTime.now();
     }
 
-    public Long getId() {
-        return id;
+    public void incrementLikes() {
+        this.likesCount++;
+        if (this.likesCount >= this.minMembers) {
+            this.status = GroupStatus.ACTIVE;
+        }
     }
 
-    public UUID getUuid() {
-        return uuid;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public String getDescription() {
-        return description;
-    }
+    public Long getId() { return id; }
+    public UUID getUuid() { return uuid; }
+    public String getName() { return name; }
+    public String getDescription() { return description; }
+    public UserEntity getCreator() { return creator; }
+    public GenderPreference getGenderPreference() { return genderPreference; }
+    public Integer getMinMembers() { return minMembers; }
+    public Integer getMaxMembers() { return maxMembers; }
+    public Integer getLikesCount() { return likesCount; }
+    public GroupStatus getStatus() { return status; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public Double getLatitude() { return latitude; }
+    public Double getLongitude() { return longitude; }
 }
-
-
