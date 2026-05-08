@@ -71,6 +71,8 @@ public class UserEntity {
         dailyLikesLeft--;
     }
 
+    public void setPassword(String password) { this.password = password; }
+
     public Long getId() { return id; }
     public UUID getUuid() { return uuid; }
     public String getEmail() { return email; }

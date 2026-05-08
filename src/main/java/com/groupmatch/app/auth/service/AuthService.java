@@ -1,6 +1,7 @@
 package com.groupmatch.app.auth.service;
 
 import com.groupmatch.app.auth.AuthResponse;
+import com.groupmatch.app.auth.ChangePasswordRequest;
 import com.groupmatch.app.auth.LoginRequest;
 import com.groupmatch.app.auth.RegisterRequest;
 import com.groupmatch.app.auth.UserRepository;
@@ -62,5 +63,15 @@ public class AuthService implements UserDetailsService {
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
         return new AuthResponse(jwtUtil.generateToken(request.getEmail()));
+    }
+
+    public void changePassword(ChangePasswordRequest request, String email) {
+        UserEntity user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new java.util.NoSuchElementException("Usuario no encontrado"));
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("La contraseña actual es incorrecta");
+        }
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 }

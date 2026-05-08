@@ -46,6 +46,10 @@ public class GroupEntity {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private GroupJoinPolicy joinPolicy = GroupJoinPolicy.OPEN;
+
     // reserved for future geolocation
     private Double latitude;
     private Double longitude;
@@ -62,6 +66,12 @@ public class GroupEntity {
         this.minMembers = minMembers;
         this.maxMembers = maxMembers;
         this.createdAt = LocalDateTime.now();
+    }
+
+    public void update(String name, String description, GroupJoinPolicy joinPolicy) {
+        this.name = name;
+        this.description = description;
+        if (joinPolicy != null) this.joinPolicy = joinPolicy;
     }
 
     public void incrementLikes() {
@@ -82,6 +92,7 @@ public class GroupEntity {
     public Integer getLikesCount() { return likesCount; }
     public GroupStatus getStatus() { return status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public GroupJoinPolicy getJoinPolicy() { return joinPolicy; }
     public Double getLatitude() { return latitude; }
     public Double getLongitude() { return longitude; }
 }

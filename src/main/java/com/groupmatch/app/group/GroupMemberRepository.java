@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface GroupMemberRepository extends JpaRepository<GroupMemberEntity, Long> {
 
@@ -15,4 +16,7 @@ public interface GroupMemberRepository extends JpaRepository<GroupMemberEntity, 
 
     @Query("SELECT m FROM GroupMemberEntity m WHERE m.user.id = :userId")
     List<GroupMemberEntity> findByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT m FROM GroupMemberEntity m WHERE m.group.id = :groupId AND m.user.id = :userId")
+    Optional<GroupMemberEntity> findByGroupIdAndUserId(@Param("groupId") Long groupId, @Param("userId") Long userId);
 }
