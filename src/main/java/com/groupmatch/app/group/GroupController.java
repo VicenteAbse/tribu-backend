@@ -1,5 +1,6 @@
 package com.groupmatch.app.group;
 
+import com.groupmatch.app.domain.group.GroupCategory;
 import com.groupmatch.app.group.service.GroupService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -33,8 +34,12 @@ public class GroupController {
     @GetMapping("/discover")
     public Page<GroupDiscoveryResponse> discover(
             @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(required = false) Double latitude,
+            @RequestParam(required = false) Double longitude,
+            @RequestParam(required = false) Double radiusKm,
+            @RequestParam(required = false) GroupCategory category,
             @PageableDefault(size = 10) Pageable pageable) {
-        return groupService.discover(userDetails.getUsername(), pageable);
+        return groupService.discover(userDetails.getUsername(), latitude, longitude, radiusKm, category, pageable);
     }
 
     @GetMapping("/{groupId}")

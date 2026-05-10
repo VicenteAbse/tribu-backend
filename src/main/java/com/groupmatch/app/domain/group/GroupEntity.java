@@ -50,7 +50,9 @@ public class GroupEntity {
     @Column(nullable = false)
     private GroupJoinPolicy joinPolicy = GroupJoinPolicy.OPEN;
 
-    // reserved for future geolocation
+    @Enumerated(EnumType.STRING)
+    private GroupCategory category;
+
     private Double latitude;
     private Double longitude;
 
@@ -93,6 +95,11 @@ public class GroupEntity {
     public GroupStatus getStatus() { return status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public GroupJoinPolicy getJoinPolicy() { return joinPolicy; }
+    public GroupCategory getCategory() { return category; }
     public Double getLatitude() { return latitude; }
     public Double getLongitude() { return longitude; }
+
+    public void setCategory(GroupCategory category) { this.category = category; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
 }

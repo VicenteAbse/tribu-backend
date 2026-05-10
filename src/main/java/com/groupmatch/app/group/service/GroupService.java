@@ -7,6 +7,7 @@ import com.groupmatch.app.domain.user.UserEntity;
 import com.groupmatch.app.group.*;
 import com.groupmatch.app.notification.service.NotificationService;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,18 +59,63 @@ public class GroupService {
             request.getMinMembers(),
             request.getMaxMembers()
         );
+        group.setCategory(request.getCategory());
+        group.setLatitude(request.getLatitude());
+        group.setLongitude(request.getLongitude());
         groupRepository.save(group);
 
         return new GroupDetailResponse(group, List.of());
     }
 
     @Transactional(readOnly = true)
-    public Page<GroupDiscoveryResponse> discover(String userEmail, Pageable pageable) {
+    public Page<GroupDiscoveryResponse> discover(
+            String userEmail,
+            Double latitude,
+            Double longitude,
+            Double radiusKm,
+            GroupCategory category,
+            Pageable pageable) {
+
         UserEntity user = findUserByEmail(userEmail);
         String gender = user.getGender() != null ? user.getGender().name() : Gender.OTHER.name();
-        return groupRepository
-            .findDiscoverableGroups(user.getId(), GroupStatus.OPEN, gender, pageable)
-            .map(GroupDiscoveryResponse::new);
+
+        List<GroupEntity> all = groupRepository.findDiscoverableGroups(user.getId(), GroupStatus.OPEN, gender);
+
+        boolean filterByDistance = latitude != null && longitude != null && radiusKm != null;
+
+        List<GroupEntity> filtered = all.stream()
+            .filter(g -> {
+                if (!filterByDistance) return true;
+                if (g.getLatitude() == null || g.getLongitude() == null) return true;
+                return haversine(latitude, longitude, g.getLatitude(), g.getLongitude()) <= radiusKm;
+            })
+            .filter(g -> category == null || category.equals(g.getCategory()))
+            .toList();
+
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), filtered.size());
+        List<GroupEntity> pageContent = start >= filtered.size() ? List.of() : filtered.subList(start, end);
+
+        List<GroupDiscoveryResponse> responses = pageContent.stream()
+            .map(g -> {
+                Double dist = (filterByDistance && g.getLatitude() != null && g.getLongitude() != null)
+                    ? Math.round(haversine(latitude, longitude, g.getLatitude(), g.getLongitude()) * 10.0) / 10.0
+                    : null;
+                return new GroupDiscoveryResponse(g, dist);
+            })
+            .toList();
+
+        return new PageImpl<>(responses, pageable, filtered.size());
+    }
+
+    private double haversine(double lat1, double lon1, double lat2, double lon2) {
+        final double R = 6371;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                 * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
     @Transactional(readOnly = true)

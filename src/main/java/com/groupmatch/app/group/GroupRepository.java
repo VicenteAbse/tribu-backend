@@ -2,13 +2,11 @@ package com.groupmatch.app.group;
 
 import com.groupmatch.app.domain.group.GroupEntity;
 import com.groupmatch.app.domain.group.GroupStatus;
-import com.groupmatch.app.domain.user.Gender;
-import com.groupmatch.app.domain.group.GenderPreference;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import java.util.List;
 
 public interface GroupRepository extends JpaRepository<GroupEntity, Long> {
 
@@ -25,10 +23,9 @@ public interface GroupRepository extends JpaRepository<GroupEntity, Long> {
               OR (g.genderPreference = 'WOMEN_ONLY' AND :gender = 'FEMALE')
           )
         """)
-    Page<GroupEntity> findDiscoverableGroups(
+    List<GroupEntity> findDiscoverableGroups(
         @Param("userId") Long userId,
         @Param("status") GroupStatus status,
-        @Param("gender") String gender,
-        Pageable pageable
+        @Param("gender") String gender
     );
 }
