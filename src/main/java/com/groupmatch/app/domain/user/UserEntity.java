@@ -23,6 +23,9 @@ public class UserEntity {
 
     private String name;
 
+    @Column(length = 300)
+    private String description;
+
     @Enumerated(EnumType.STRING)
     private Gender gender;
 
@@ -48,10 +51,9 @@ public class UserEntity {
         this.password = password;
     }
 
-    public void updateProfile(String name, Gender gender, LocalDate birthDate, Integer searchRadiusKm) {
+    public void updateProfile(String name, String description, Integer searchRadiusKm) {
         this.name = name;
-        this.gender = gender;
-        this.birthDate = birthDate;
+        this.description = description;
         this.searchRadiusKm = searchRadiusKm;
     }
 
@@ -71,6 +73,9 @@ public class UserEntity {
         dailyLikesLeft--;
     }
 
+    public void setName(String name) { this.name = name; }
+    public void setGender(Gender gender) { this.gender = gender; }
+    public void setBirthDate(LocalDate birthDate) { this.birthDate = birthDate; }
     public void setPassword(String password) { this.password = password; }
 
     public Long getId() { return id; }
@@ -78,6 +83,7 @@ public class UserEntity {
     public String getEmail() { return email; }
     public String getPassword() { return password; }
     public String getName() { return name; }
+    public String getDescription() { return description; }
     public Gender getGender() { return gender; }
     public LocalDate getBirthDate() { return birthDate; }
     public Integer getSearchRadiusKm() { return searchRadiusKm; }

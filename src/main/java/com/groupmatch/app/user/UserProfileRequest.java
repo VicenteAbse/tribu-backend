@@ -1,9 +1,6 @@
 package com.groupmatch.app.user;
 
-import com.groupmatch.app.domain.user.Gender;
 import jakarta.validation.constraints.*;
-
-import java.time.LocalDate;
 
 public class UserProfileRequest {
 
@@ -11,12 +8,8 @@ public class UserProfileRequest {
     @Size(min = 2, max = 80, message = "El nombre debe tener entre 2 y 80 caracteres")
     private String name;
 
-    @NotNull(message = "El género es obligatorio")
-    private Gender gender;
-
-    @NotNull(message = "La fecha de nacimiento es obligatoria")
-    @Past(message = "La fecha de nacimiento debe estar en el pasado")
-    private LocalDate birthDate;
+    @Size(max = 300, message = "La descripción no puede superar 300 caracteres")
+    private String description;
 
     @NotNull(message = "El radio de búsqueda es obligatorio")
     @Min(value = 1, message = "El radio de búsqueda debe ser al menos 1 km")
@@ -26,7 +19,6 @@ public class UserProfileRequest {
     public UserProfileRequest() {}
 
     public String getName() { return name; }
-    public Gender getGender() { return gender; }
-    public LocalDate getBirthDate() { return birthDate; }
+    public String getDescription() { return description; }
     public Integer getSearchRadiusKm() { return searchRadiusKm; }
 }

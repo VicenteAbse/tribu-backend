@@ -31,7 +31,7 @@ public class UserService {
     @Transactional
     public UserProfileResponse updateProfile(UserProfileRequest request, String email) {
         UserEntity user = findByEmail(email);
-        user.updateProfile(request.getName(), request.getGender(), request.getBirthDate(), request.getSearchRadiusKm());
+        user.updateProfile(request.getName(), request.getDescription(), request.getSearchRadiusKm());
         userRepository.save(user);
         return new UserProfileResponse(user);
     }

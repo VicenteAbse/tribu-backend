@@ -54,6 +54,9 @@ public class AuthService implements UserDetailsService {
                 request.getEmail(),
                 passwordEncoder.encode(request.getPassword())
         );
+        user.setName(request.getName());
+        user.setGender(request.getGender());
+        user.setBirthDate(request.getBirthDate());
         userRepository.save(user);
         return new AuthResponse(jwtUtil.generateToken(user.getEmail()));
     }

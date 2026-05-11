@@ -11,6 +11,7 @@ public class UserProfileResponse {
     private UUID uuid;
     private String email;
     private String name;
+    private String description;
     private Gender gender;
     private LocalDate birthDate;
     private Integer searchRadiusKm;
@@ -20,6 +21,7 @@ public class UserProfileResponse {
         this.uuid = user.getUuid();
         this.email = user.getEmail();
         this.name = user.getName();
+        this.description = user.getDescription();
         this.gender = user.getGender();
         this.birthDate = user.getBirthDate();
         this.searchRadiusKm = user.getSearchRadiusKm();
@@ -29,6 +31,7 @@ public class UserProfileResponse {
     public UUID getUuid() { return uuid; }
     public String getEmail() { return email; }
     public String getName() { return name; }
+    public String getDescription() { return description; }
     public Gender getGender() { return gender; }
     public LocalDate getBirthDate() { return birthDate; }
     public Integer getSearchRadiusKm() { return searchRadiusKm; }
