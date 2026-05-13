@@ -62,6 +62,7 @@ public class GroupService {
         group.setCategory(request.getCategory());
         group.setLatitude(request.getLatitude());
         group.setLongitude(request.getLongitude());
+        if (request.getJoinPolicy() != null) group.setJoinPolicy(request.getJoinPolicy());
         groupRepository.save(group);
 
         return new GroupDetailResponse(group, List.of());

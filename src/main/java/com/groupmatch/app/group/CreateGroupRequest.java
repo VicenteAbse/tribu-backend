@@ -2,6 +2,7 @@ package com.groupmatch.app.group;
 
 import com.groupmatch.app.domain.group.GenderPreference;
 import com.groupmatch.app.domain.group.GroupCategory;
+import com.groupmatch.app.domain.group.GroupJoinPolicy;
 import jakarta.validation.constraints.*;
 
 public class CreateGroupRequest {
@@ -38,6 +39,8 @@ public class CreateGroupRequest {
     @DecimalMax(value = "180.0", message = "Longitud inválida")
     private Double longitude;
 
+    private GroupJoinPolicy joinPolicy;
+
     public CreateGroupRequest() {}
 
     public String getName() { return name; }
@@ -48,4 +51,5 @@ public class CreateGroupRequest {
     public Integer getMaxMembers() { return maxMembers; }
     public Double getLatitude() { return latitude; }
     public Double getLongitude() { return longitude; }
+    public GroupJoinPolicy getJoinPolicy() { return joinPolicy; }
 }

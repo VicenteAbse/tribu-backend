@@ -102,4 +102,5 @@ public class GroupEntity {
     public void setCategory(GroupCategory category) { this.category = category; }
     public void setLatitude(Double latitude) { this.latitude = latitude; }
     public void setLongitude(Double longitude) { this.longitude = longitude; }
+    public void setJoinPolicy(GroupJoinPolicy joinPolicy) { this.joinPolicy = joinPolicy; }
 }
