@@ -10,6 +10,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/groups/{groupId}/messages")
 public class ChatController {
@@ -22,7 +24,7 @@ public class ChatController {
 
     @GetMapping
     public Page<MessageResponse> getMessages(
-            @PathVariable Long groupId,
+            @PathVariable UUID groupId,
             @AuthenticationPrincipal UserDetails userDetails,
             @PageableDefault(size = 50) Pageable pageable) {
         return chatService.getMessages(groupId, userDetails.getUsername(), pageable);
@@ -31,7 +33,7 @@ public class ChatController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public MessageResponse sendMessage(
-            @PathVariable Long groupId,
+            @PathVariable UUID groupId,
             @Valid @RequestBody SendMessageRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
         return chatService.sendMessage(groupId, request, userDetails.getUsername());

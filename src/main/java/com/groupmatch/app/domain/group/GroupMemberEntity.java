@@ -41,7 +41,9 @@ public class GroupMemberEntity {
         this.joinedAt = LocalDateTime.now();
     }
 
-    public void promote() { this.role = GroupMemberRole.ADMIN; }
+    public void promote()   { this.role = GroupMemberRole.ADMIN;  }
+    public void setOwner()  { this.role = GroupMemberRole.OWNER;  }
+    public void demote()    { this.role = GroupMemberRole.MEMBER; }
     public void toggleMute() { this.muted = !this.muted; }
 
     public Long getId() { return id; }

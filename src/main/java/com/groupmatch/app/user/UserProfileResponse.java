@@ -16,6 +16,7 @@ public class UserProfileResponse {
     private LocalDate birthDate;
     private Integer searchRadiusKm;
     private Integer dailyLikesLeft;
+    private String avatarBase64;
 
     public UserProfileResponse(UserEntity user) {
         this.uuid = user.getUuid();
@@ -26,6 +27,7 @@ public class UserProfileResponse {
         this.birthDate = user.getBirthDate();
         this.searchRadiusKm = user.getSearchRadiusKm();
         this.dailyLikesLeft = user.getDailyLikesLeft();
+        this.avatarBase64 = user.getAvatarBase64();
     }
 
     public UUID getUuid() { return uuid; }
@@ -36,4 +38,5 @@ public class UserProfileResponse {
     public LocalDate getBirthDate() { return birthDate; }
     public Integer getSearchRadiusKm() { return searchRadiusKm; }
     public Integer getDailyLikesLeft() { return dailyLikesLeft; }
+    public String getAvatarBase64() { return avatarBase64; }
 }

@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.UUID;
 
 @Service
 public class GroupService {
@@ -66,7 +67,7 @@ public class GroupService {
         groupRepository.save(group);
 
         GroupMemberEntity creatorMembership = new GroupMemberEntity(creator, group);
-        creatorMembership.promote();
+        creatorMembership.setOwner();
         groupMemberRepository.save(creatorMembership);
 
         return new GroupDetailResponse(group, List.of(creatorMembership));
@@ -84,7 +85,8 @@ public class GroupService {
         UserEntity user = findUserByEmail(userEmail);
         String gender = user.getGender() != null ? user.getGender().name() : Gender.OTHER.name();
 
-        List<GroupEntity> all = groupRepository.findDiscoverableGroups(user.getId(), GroupStatus.OPEN, gender);
+        List<GroupEntity> all = groupRepository.findDiscoverableGroups(
+            user.getId(), List.of(GroupStatus.OPEN, GroupStatus.ACTIVE), gender);
 
         boolean filterByDistance = latitude != null && longitude != null && radiusKm != null;
 
@@ -124,30 +126,42 @@ public class GroupService {
     }
 
     @Transactional(readOnly = true)
-    public GroupDetailResponse getDetail(Long groupId, String userEmail) {
-        GroupEntity group = findGroupById(groupId);
-        List<GroupMemberEntity> members = groupMemberRepository.findByGroupId(groupId);
+    public GroupDetailResponse getDetail(UUID groupUuid, String userEmail) {
+        GroupEntity group = findGroupByUuid(groupUuid);
+        List<GroupMemberEntity> members = groupMemberRepository.findByGroupId(group.getId());
         return new GroupDetailResponse(group, members);
     }
 
     @Transactional
-    public GroupDetailResponse updateGroup(Long groupId, UpdateGroupRequest request, String userEmail) {
+    public GroupDetailResponse updateGroup(UUID groupUuid, UpdateGroupRequest request, String userEmail) {
         UserEntity user = findUserByEmail(userEmail);
-        GroupEntity group = findGroupById(groupId);
-        requireAdmin(user.getId(), groupId, group);
+        GroupEntity group = findGroupByUuid(groupUuid);
+        requireAdmin(user.getId(), group.getId());
         group.update(request.getName(), request.getDescription(), request.getJoinPolicy());
         groupRepository.save(group);
-        List<GroupMemberEntity> members = groupMemberRepository.findByGroupId(groupId);
+        List<GroupMemberEntity> members = groupMemberRepository.findByGroupId(group.getId());
         return new GroupDetailResponse(group, members);
     }
 
     @Transactional
-    public SwipeResponse swipe(Long groupId, SwipeRequest request, String userEmail) {
+    public GroupDetailResponse updateCoverImage(UUID groupUuid, String imageBase64, String userEmail) {
         UserEntity user = findUserByEmail(userEmail);
-        GroupEntity group = findGroupById(groupId);
+        GroupEntity group = findGroupByUuid(groupUuid);
+        requireAdmin(user.getId(), group.getId());
+        group.setCoverImageBase64(imageBase64);
+        groupRepository.save(group);
+        List<GroupMemberEntity> members = groupMemberRepository.findByGroupId(group.getId());
+        return new GroupDetailResponse(group, members);
+    }
 
-        if (group.getStatus() != GroupStatus.OPEN) {
-            throw new IllegalStateException("Este grupo ya no está disponible para swipe");
+    @Transactional
+    public SwipeResponse swipe(UUID groupUuid, SwipeRequest request, String userEmail) {
+        UserEntity user = findUserByEmail(userEmail);
+        GroupEntity group = findGroupByUuid(groupUuid);
+        Long groupId = group.getId();
+
+        if (group.getStatus() == GroupStatus.CLOSED) {
+            throw new IllegalStateException("Este grupo ya está completo");
         }
         if (group.getCreator().getId().equals(user.getId())) {
             throw new IllegalArgumentException("No puedes dar swipe a tu propio grupo");
@@ -155,8 +169,40 @@ public class GroupService {
         if (groupSwipeRepository.existsByUserIdAndGroupId(user.getId(), groupId)) {
             throw new IllegalArgumentException("Ya hiciste swipe en este grupo");
         }
+        if (groupMemberRepository.existsByUserIdAndGroupId(user.getId(), groupId)) {
+            throw new IllegalArgumentException("Ya eres miembro de este grupo");
+        }
 
         boolean liked = request.getLiked();
+
+        if (group.getStatus() == GroupStatus.ACTIVE) {
+            // Grupo ya activo: unirse o solicitar ingreso
+            groupSwipeRepository.save(new GroupSwipeEntity(user, group, liked));
+            if (liked) {
+                if (group.getJoinPolicy() == GroupJoinPolicy.OPEN) {
+                    groupMemberRepository.save(new GroupMemberEntity(user, group));
+                    notificationService.create(
+                        user,
+                        "¡Te uniste al grupo!",
+                        "Ahora eres miembro de \"" + group.getName() + "\". ¡El chat está disponible!"
+                    );
+                } else {
+                    boolean alreadyRequested = joinRequestRepository
+                        .existsByUserIdAndGroupId(user.getId(), groupId);
+                    if (!alreadyRequested) {
+                        joinRequestRepository.save(new JoinRequestEntity(user, group));
+                        notificationService.create(
+                            group.getCreator(),
+                            "Nueva solicitud de ingreso",
+                            user.getName() + " quiere unirse a \"" + group.getName() + "\""
+                        );
+                    }
+                }
+            }
+            return new SwipeResponse(liked, group.getStatus(), false, user.getDailyLikesLeft());
+        }
+
+        // Grupo OPEN: lógica original de activación por likes
         GroupStatus statusBefore = group.getStatus();
 
         if (liked) {
@@ -186,38 +232,54 @@ public class GroupService {
     }
 
     @Transactional(readOnly = true)
-    public List<MemberResponse> getMembers(Long groupId, String userEmail) {
-        findGroupById(groupId);
-        return groupMemberRepository.findByGroupId(groupId)
+    public List<MemberResponse> getMembers(UUID groupUuid, String userEmail) {
+        GroupEntity group = findGroupByUuid(groupUuid);
+        return groupMemberRepository.findByGroupId(group.getId())
             .stream()
             .map(MemberResponse::new)
             .toList();
     }
 
     @Transactional
-    public void removeMember(Long groupId, Long memberId, String userEmail) {
-        UserEntity admin = findUserByEmail(userEmail);
-        GroupEntity group = findGroupById(groupId);
-        requireAdmin(admin.getId(), groupId, group);
+    public void removeMember(UUID groupUuid, Long memberId, String userEmail) {
+        UserEntity requester = findUserByEmail(userEmail);
+        GroupEntity group = findGroupByUuid(groupUuid);
+        Long groupId = group.getId();
+
+        GroupMemberEntity requesterMembership = groupMemberRepository.findByGroupIdAndUserId(groupId, requester.getId())
+            .orElseThrow(() -> new IllegalStateException("No tienes permisos para esta acción"));
 
         GroupMemberEntity target = groupMemberRepository.findById(memberId)
             .orElseThrow(() -> new NoSuchElementException("Miembro no encontrado"));
         if (!target.getGroup().getId().equals(groupId)) {
             throw new IllegalArgumentException("El miembro no pertenece a este grupo");
         }
+
+        boolean requesterIsOwner = requesterMembership.getRole() == GroupMemberRole.OWNER;
+        boolean requesterIsAdmin = requesterMembership.getRole() == GroupMemberRole.ADMIN;
+        boolean targetIsOwner    = target.getRole() == GroupMemberRole.OWNER;
+        boolean targetIsAdmin    = target.getRole() == GroupMemberRole.ADMIN;
+
+        if (targetIsOwner) throw new IllegalStateException("No se puede expulsar al dueño del grupo");
+        if (!requesterIsOwner && !requesterIsAdmin) throw new IllegalStateException("No tienes permisos para esta acción");
+        if (requesterIsAdmin && targetIsAdmin) throw new IllegalStateException("Los admin no pueden expulsar a otros admin");
+
         groupMemberRepository.delete(target);
     }
 
     @Transactional
-    public MemberResponse promoteMember(Long groupId, Long memberId, String userEmail) {
-        UserEntity admin = findUserByEmail(userEmail);
-        GroupEntity group = findGroupById(groupId);
-        requireAdmin(admin.getId(), groupId, group);
+    public MemberResponse promoteMember(UUID groupUuid, Long memberId, String userEmail) {
+        UserEntity owner = findUserByEmail(userEmail);
+        GroupEntity group = findGroupByUuid(groupUuid);
+        requireOwner(owner.getId(), group.getId());
 
         GroupMemberEntity target = groupMemberRepository.findById(memberId)
             .orElseThrow(() -> new NoSuchElementException("Miembro no encontrado"));
-        if (!target.getGroup().getId().equals(groupId)) {
+        if (!target.getGroup().getId().equals(group.getId())) {
             throw new IllegalArgumentException("El miembro no pertenece a este grupo");
+        }
+        if (target.getRole() != GroupMemberRole.MEMBER) {
+            throw new IllegalStateException("Solo se puede promover a miembros");
         }
         target.promote();
         groupMemberRepository.save(target);
@@ -225,39 +287,71 @@ public class GroupService {
     }
 
     @Transactional
-    public MemberResponse muteMember(Long groupId, Long memberId, String userEmail) {
-        UserEntity admin = findUserByEmail(userEmail);
-        GroupEntity group = findGroupById(groupId);
-        requireAdmin(admin.getId(), groupId, group);
+    public MemberResponse demoteMember(UUID groupUuid, Long memberId, String userEmail) {
+        UserEntity owner = findUserByEmail(userEmail);
+        GroupEntity group = findGroupByUuid(groupUuid);
+        requireOwner(owner.getId(), group.getId());
+
+        GroupMemberEntity target = groupMemberRepository.findById(memberId)
+            .orElseThrow(() -> new NoSuchElementException("Miembro no encontrado"));
+        if (!target.getGroup().getId().equals(group.getId())) {
+            throw new IllegalArgumentException("El miembro no pertenece a este grupo");
+        }
+        if (target.getRole() != GroupMemberRole.ADMIN) {
+            throw new IllegalStateException("Solo se puede quitar el rol a admins");
+        }
+        target.demote();
+        groupMemberRepository.save(target);
+        return new MemberResponse(target);
+    }
+
+    @Transactional
+    public MemberResponse muteMember(UUID groupUuid, Long memberId, String userEmail) {
+        UserEntity requester = findUserByEmail(userEmail);
+        GroupEntity group = findGroupByUuid(groupUuid);
+        Long groupId = group.getId();
+
+        GroupMemberEntity requesterMembership = groupMemberRepository.findByGroupIdAndUserId(groupId, requester.getId())
+            .orElseThrow(() -> new IllegalStateException("No tienes permisos para esta acción"));
 
         GroupMemberEntity target = groupMemberRepository.findById(memberId)
             .orElseThrow(() -> new NoSuchElementException("Miembro no encontrado"));
         if (!target.getGroup().getId().equals(groupId)) {
             throw new IllegalArgumentException("El miembro no pertenece a este grupo");
         }
+
+        boolean requesterIsOwner = requesterMembership.getRole() == GroupMemberRole.OWNER;
+        boolean requesterIsAdmin = requesterMembership.getRole() == GroupMemberRole.ADMIN;
+        boolean targetIsOwner    = target.getRole() == GroupMemberRole.OWNER;
+        boolean targetIsAdmin    = target.getRole() == GroupMemberRole.ADMIN;
+
+        if (targetIsOwner) throw new IllegalStateException("No se puede silenciar al dueño del grupo");
+        if (!requesterIsOwner && !requesterIsAdmin) throw new IllegalStateException("No tienes permisos para esta acción");
+        if (requesterIsAdmin && targetIsAdmin) throw new IllegalStateException("Los admin no pueden silenciar a otros admin");
+
         target.toggleMute();
         groupMemberRepository.save(target);
         return new MemberResponse(target);
     }
 
     @Transactional(readOnly = true)
-    public List<JoinRequestResponse> getJoinRequests(Long groupId, String userEmail) {
+    public List<JoinRequestResponse> getJoinRequests(UUID groupUuid, String userEmail) {
         UserEntity user = findUserByEmail(userEmail);
-        GroupEntity group = findGroupById(groupId);
-        requireAdmin(user.getId(), groupId, group);
-        return joinRequestRepository.findByGroupIdAndStatus(groupId, JoinRequestStatus.PENDING)
+        GroupEntity group = findGroupByUuid(groupUuid);
+        requireAdmin(user.getId(), group.getId());
+        return joinRequestRepository.findByGroupIdAndStatus(group.getId(), JoinRequestStatus.PENDING)
             .stream()
             .map(JoinRequestResponse::new)
             .toList();
     }
 
     @Transactional
-    public JoinRequestResponse approveJoinRequest(Long groupId, Long requestId, String userEmail) {
+    public JoinRequestResponse approveJoinRequest(UUID groupUuid, Long requestId, String userEmail) {
         UserEntity admin = findUserByEmail(userEmail);
-        GroupEntity group = findGroupById(groupId);
-        requireAdmin(admin.getId(), groupId, group);
+        GroupEntity group = findGroupByUuid(groupUuid);
+        requireAdmin(admin.getId(), group.getId());
 
-        JoinRequestEntity joinRequest = joinRequestRepository.findByGroupIdAndId(groupId, requestId)
+        JoinRequestEntity joinRequest = joinRequestRepository.findByGroupIdAndId(group.getId(), requestId)
             .orElseThrow(() -> new NoSuchElementException("Solicitud no encontrada"));
         if (joinRequest.getStatus() != JoinRequestStatus.PENDING) {
             throw new IllegalStateException("La solicitud ya fue procesada");
@@ -265,7 +359,7 @@ public class GroupService {
         joinRequest.approve();
         joinRequestRepository.save(joinRequest);
 
-        if (!groupMemberRepository.existsByUserIdAndGroupId(joinRequest.getUser().getId(), groupId)) {
+        if (!groupMemberRepository.existsByUserIdAndGroupId(joinRequest.getUser().getId(), group.getId())) {
             groupMemberRepository.save(new GroupMemberEntity(joinRequest.getUser(), group));
         }
 
@@ -279,12 +373,12 @@ public class GroupService {
     }
 
     @Transactional
-    public JoinRequestResponse rejectJoinRequest(Long groupId, Long requestId, String userEmail) {
+    public JoinRequestResponse rejectJoinRequest(UUID groupUuid, Long requestId, String userEmail) {
         UserEntity admin = findUserByEmail(userEmail);
-        GroupEntity group = findGroupById(groupId);
-        requireAdmin(admin.getId(), groupId, group);
+        GroupEntity group = findGroupByUuid(groupUuid);
+        requireAdmin(admin.getId(), group.getId());
 
-        JoinRequestEntity joinRequest = joinRequestRepository.findByGroupIdAndId(groupId, requestId)
+        JoinRequestEntity joinRequest = joinRequestRepository.findByGroupIdAndId(group.getId(), requestId)
             .orElseThrow(() -> new NoSuchElementException("Solicitud no encontrada"));
         if (joinRequest.getStatus() != JoinRequestStatus.PENDING) {
             throw new IllegalStateException("La solicitud ya fue procesada");
@@ -302,10 +396,10 @@ public class GroupService {
     }
 
     @Transactional
-    public GroupEventResponse createEvent(Long groupId, GroupEventRequest request, String userEmail) {
+    public GroupEventResponse createEvent(UUID groupUuid, GroupEventRequest request, String userEmail) {
         UserEntity user = findUserByEmail(userEmail);
-        GroupEntity group = findGroupById(groupId);
-        requireAdmin(user.getId(), groupId, group);
+        GroupEntity group = findGroupByUuid(groupUuid);
+        requireAdmin(user.getId(), group.getId());
 
         GroupEventEntity event = new GroupEventEntity(
             group, user,
@@ -319,9 +413,9 @@ public class GroupService {
     }
 
     @Transactional(readOnly = true)
-    public List<GroupEventResponse> getEvents(Long groupId, String userEmail) {
-        findGroupById(groupId);
-        return groupEventRepository.findByGroupIdOrderByEventDateAsc(groupId)
+    public List<GroupEventResponse> getEvents(UUID groupUuid, String userEmail) {
+        GroupEntity group = findGroupByUuid(groupUuid);
+        return groupEventRepository.findByGroupIdOrderByEventDateAsc(group.getId())
             .stream()
             .map(GroupEventResponse::new)
             .toList();
@@ -341,11 +435,16 @@ public class GroupService {
         }
     }
 
-    private void requireAdmin(Long userId, Long groupId, GroupEntity group) {
-        if (group.getCreator().getId().equals(userId)) return;
+    private void requireAdmin(Long userId, Long groupId) {
         groupMemberRepository.findByGroupIdAndUserId(groupId, userId)
-            .filter(m -> m.getRole() == GroupMemberRole.ADMIN)
+            .filter(m -> m.getRole() == GroupMemberRole.ADMIN || m.getRole() == GroupMemberRole.OWNER)
             .orElseThrow(() -> new IllegalStateException("No tienes permisos para esta acción"));
+    }
+
+    private void requireOwner(Long userId, Long groupId) {
+        groupMemberRepository.findByGroupIdAndUserId(groupId, userId)
+            .filter(m -> m.getRole() == GroupMemberRole.OWNER)
+            .orElseThrow(() -> new IllegalStateException("Solo el dueño del grupo puede realizar esta acción"));
     }
 
     private UserEntity findUserByEmail(String email) {
@@ -353,8 +452,8 @@ public class GroupService {
             .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado"));
     }
 
-    private GroupEntity findGroupById(Long groupId) {
-        return groupRepository.findById(groupId)
+    private GroupEntity findGroupByUuid(UUID uuid) {
+        return groupRepository.findByUuid(uuid)
             .orElseThrow(() -> new NoSuchElementException("Grupo no encontrado"));
     }
 }

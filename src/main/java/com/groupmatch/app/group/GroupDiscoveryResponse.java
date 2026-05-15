@@ -6,9 +6,11 @@ import com.groupmatch.app.domain.group.GroupEntity;
 import com.groupmatch.app.domain.group.GroupStatus;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 public class GroupDiscoveryResponse {
 
+    private UUID uuid;
     private Long id;
     private String name;
     private String description;
@@ -21,8 +23,10 @@ public class GroupDiscoveryResponse {
     private GroupStatus status;
     private LocalDateTime createdAt;
     private Double distanceKm;
+    private String coverImageBase64;
 
     public GroupDiscoveryResponse(GroupEntity group, Double distanceKm) {
+        this.uuid = group.getUuid();
         this.id = group.getId();
         this.name = group.getName();
         this.description = group.getDescription();
@@ -37,8 +41,10 @@ public class GroupDiscoveryResponse {
         this.status = group.getStatus();
         this.createdAt = group.getCreatedAt();
         this.distanceKm = distanceKm;
+        this.coverImageBase64 = group.getCoverImageBase64();
     }
 
+    public UUID getUuid() { return uuid; }
     public Long getId() { return id; }
     public String getName() { return name; }
     public String getDescription() { return description; }
@@ -51,4 +57,5 @@ public class GroupDiscoveryResponse {
     public GroupStatus getStatus() { return status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public Double getDistanceKm() { return distanceKm; }
+    public String getCoverImageBase64() { return coverImageBase64; }
 }

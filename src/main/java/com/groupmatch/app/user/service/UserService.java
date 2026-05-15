@@ -36,6 +36,14 @@ public class UserService {
         return new UserProfileResponse(user);
     }
 
+    @Transactional
+    public UserProfileResponse updateAvatar(String imageBase64, String email) {
+        UserEntity user = findByEmail(email);
+        user.setAvatarBase64(imageBase64);
+        userRepository.save(user);
+        return new UserProfileResponse(user);
+    }
+
     @Transactional(readOnly = true)
     public List<GroupSummaryResponse> getMyGroups(String email) {
         UserEntity user = findByEmail(email);

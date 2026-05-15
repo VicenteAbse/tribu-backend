@@ -56,6 +56,9 @@ public class GroupEntity {
     private Double latitude;
     private Double longitude;
 
+    @Column(columnDefinition = "TEXT")
+    private String coverImageBase64;
+
     protected GroupEntity() {}
 
     public GroupEntity(String name, String description, UserEntity creator,
@@ -99,6 +102,8 @@ public class GroupEntity {
     public Double getLatitude() { return latitude; }
     public Double getLongitude() { return longitude; }
 
+    public String getCoverImageBase64() { return coverImageBase64; }
+    public void setCoverImageBase64(String coverImageBase64) { this.coverImageBase64 = coverImageBase64; }
     public void setCategory(GroupCategory category) { this.category = category; }
     public void setLatitude(Double latitude) { this.latitude = latitude; }
     public void setLongitude(Double longitude) { this.longitude = longitude; }

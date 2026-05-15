@@ -39,6 +39,9 @@ public class UserEntity {
 
     private LocalDate likesResetDate;
 
+    @Column(columnDefinition = "TEXT")
+    private String avatarBase64;
+
     // reserved for future geolocation
     private Double latitude;
     private Double longitude;
@@ -89,6 +92,8 @@ public class UserEntity {
     public Integer getSearchRadiusKm() { return searchRadiusKm; }
     public Integer getDailyLikesLeft() { return dailyLikesLeft; }
     public LocalDate getLikesResetDate() { return likesResetDate; }
+    public String getAvatarBase64() { return avatarBase64; }
+    public void setAvatarBase64(String avatarBase64) { this.avatarBase64 = avatarBase64; }
     public Double getLatitude() { return latitude; }
     public Double getLongitude() { return longitude; }
 }

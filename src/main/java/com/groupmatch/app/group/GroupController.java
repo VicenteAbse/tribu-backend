@@ -11,6 +11,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 import java.util.List;
 
 @RestController
@@ -44,14 +46,14 @@ public class GroupController {
 
     @GetMapping("/{groupId}")
     public GroupDetailResponse getDetail(
-            @PathVariable Long groupId,
+            @PathVariable UUID groupId,
             @AuthenticationPrincipal UserDetails userDetails) {
         return groupService.getDetail(groupId, userDetails.getUsername());
     }
 
     @PutMapping("/{groupId}")
     public GroupDetailResponse updateGroup(
-            @PathVariable Long groupId,
+            @PathVariable UUID groupId,
             @Valid @RequestBody UpdateGroupRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
         return groupService.updateGroup(groupId, request, userDetails.getUsername());
@@ -59,7 +61,7 @@ public class GroupController {
 
     @PostMapping("/{groupId}/swipe")
     public SwipeResponse swipe(
-            @PathVariable Long groupId,
+            @PathVariable UUID groupId,
             @Valid @RequestBody SwipeRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
         return groupService.swipe(groupId, request, userDetails.getUsername());
@@ -67,7 +69,7 @@ public class GroupController {
 
     @GetMapping("/{groupId}/members")
     public List<MemberResponse> getMembers(
-            @PathVariable Long groupId,
+            @PathVariable UUID groupId,
             @AuthenticationPrincipal UserDetails userDetails) {
         return groupService.getMembers(groupId, userDetails.getUsername());
     }
@@ -75,7 +77,7 @@ public class GroupController {
     @DeleteMapping("/{groupId}/members/{memberId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void removeMember(
-            @PathVariable Long groupId,
+            @PathVariable UUID groupId,
             @PathVariable Long memberId,
             @AuthenticationPrincipal UserDetails userDetails) {
         groupService.removeMember(groupId, memberId, userDetails.getUsername());
@@ -83,15 +85,23 @@ public class GroupController {
 
     @PostMapping("/{groupId}/members/{memberId}/promote")
     public MemberResponse promoteMember(
-            @PathVariable Long groupId,
+            @PathVariable UUID groupId,
             @PathVariable Long memberId,
             @AuthenticationPrincipal UserDetails userDetails) {
         return groupService.promoteMember(groupId, memberId, userDetails.getUsername());
     }
 
+    @PostMapping("/{groupId}/members/{memberId}/demote")
+    public MemberResponse demoteMember(
+            @PathVariable UUID groupId,
+            @PathVariable Long memberId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return groupService.demoteMember(groupId, memberId, userDetails.getUsername());
+    }
+
     @PostMapping("/{groupId}/members/{memberId}/mute")
     public MemberResponse muteMember(
-            @PathVariable Long groupId,
+            @PathVariable UUID groupId,
             @PathVariable Long memberId,
             @AuthenticationPrincipal UserDetails userDetails) {
         return groupService.muteMember(groupId, memberId, userDetails.getUsername());
@@ -99,14 +109,14 @@ public class GroupController {
 
     @GetMapping("/{groupId}/join-requests")
     public List<JoinRequestResponse> getJoinRequests(
-            @PathVariable Long groupId,
+            @PathVariable UUID groupId,
             @AuthenticationPrincipal UserDetails userDetails) {
         return groupService.getJoinRequests(groupId, userDetails.getUsername());
     }
 
     @PostMapping("/{groupId}/join-requests/{requestId}/approve")
     public JoinRequestResponse approveJoinRequest(
-            @PathVariable Long groupId,
+            @PathVariable UUID groupId,
             @PathVariable Long requestId,
             @AuthenticationPrincipal UserDetails userDetails) {
         return groupService.approveJoinRequest(groupId, requestId, userDetails.getUsername());
@@ -114,16 +124,24 @@ public class GroupController {
 
     @PostMapping("/{groupId}/join-requests/{requestId}/reject")
     public JoinRequestResponse rejectJoinRequest(
-            @PathVariable Long groupId,
+            @PathVariable UUID groupId,
             @PathVariable Long requestId,
             @AuthenticationPrincipal UserDetails userDetails) {
         return groupService.rejectJoinRequest(groupId, requestId, userDetails.getUsername());
     }
 
+    @PutMapping("/{groupId}/cover")
+    public GroupDetailResponse updateCoverImage(
+            @PathVariable UUID groupId,
+            @RequestBody java.util.Map<String, String> body,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return groupService.updateCoverImage(groupId, body.get("imageBase64"), userDetails.getUsername());
+    }
+
     @PostMapping("/{groupId}/events")
     @ResponseStatus(HttpStatus.CREATED)
     public GroupEventResponse createEvent(
-            @PathVariable Long groupId,
+            @PathVariable UUID groupId,
             @Valid @RequestBody GroupEventRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
         return groupService.createEvent(groupId, request, userDetails.getUsername());
@@ -131,7 +149,7 @@ public class GroupController {
 
     @GetMapping("/{groupId}/events")
     public List<GroupEventResponse> getEvents(
-            @PathVariable Long groupId,
+            @PathVariable UUID groupId,
             @AuthenticationPrincipal UserDetails userDetails) {
         return groupService.getEvents(groupId, userDetails.getUsername());
     }

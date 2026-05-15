@@ -35,6 +35,13 @@ public class UserController {
         return userService.updateProfile(request, userDetails.getUsername());
     }
 
+    @PutMapping("/avatar")
+    public UserProfileResponse updateAvatar(
+            @RequestBody java.util.Map<String, String> body,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return userService.updateAvatar(body.get("imageBase64"), userDetails.getUsername());
+    }
+
     @GetMapping("/groups")
     public List<GroupSummaryResponse> getMyGroups(@AuthenticationPrincipal UserDetails userDetails) {
         return userService.getMyGroups(userDetails.getUsername());

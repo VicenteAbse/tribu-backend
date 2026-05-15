@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.NoSuchElementException;
+import java.util.UUID;
 
 @Service
 public class ChatService {
@@ -36,17 +37,17 @@ public class ChatService {
     }
 
     @Transactional(readOnly = true)
-    public Page<MessageResponse> getMessages(Long groupId, String userEmail, Pageable pageable) {
-        GroupEntity group = findActiveGroup(groupId);
+    public Page<MessageResponse> getMessages(UUID groupUuid, String userEmail, Pageable pageable) {
+        GroupEntity group = findActiveGroup(groupUuid);
         UserEntity user = findUserByEmail(userEmail);
         requireMembership(user.getId(), group.getId());
-        return messageRepository.findByGroupIdOrderBySentAtAsc(groupId, pageable)
+        return messageRepository.findByGroupIdOrderBySentAtAsc(group.getId(), pageable)
             .map(MessageResponse::new);
     }
 
     @Transactional
-    public MessageResponse sendMessage(Long groupId, SendMessageRequest request, String userEmail) {
-        GroupEntity group = findActiveGroup(groupId);
+    public MessageResponse sendMessage(UUID groupUuid, SendMessageRequest request, String userEmail) {
+        GroupEntity group = findActiveGroup(groupUuid);
         UserEntity user = findUserByEmail(userEmail);
         requireMembership(user.getId(), group.getId());
         MessageEntity message = new MessageEntity(group, user, request.getContent());
@@ -54,8 +55,8 @@ public class ChatService {
         return new MessageResponse(message);
     }
 
-    private GroupEntity findActiveGroup(Long groupId) {
-        GroupEntity group = groupRepository.findById(groupId)
+    private GroupEntity findActiveGroup(UUID groupUuid) {
+        GroupEntity group = groupRepository.findByUuid(groupUuid)
             .orElseThrow(() -> new NoSuchElementException("Grupo no encontrado"));
         if (group.getStatus() != GroupStatus.ACTIVE) {
             throw new IllegalStateException("El chat solo está disponible cuando el grupo está activo");

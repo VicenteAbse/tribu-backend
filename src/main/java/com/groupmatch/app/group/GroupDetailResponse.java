@@ -21,6 +21,7 @@ public class GroupDetailResponse {
     private GroupStatus status;
     private LocalDateTime createdAt;
     private List<MemberResponse> members;
+    private String coverImageBase64;
 
     public GroupDetailResponse(GroupEntity group, List<GroupMemberEntity> members) {
         this.id = group.getId();
@@ -38,6 +39,7 @@ public class GroupDetailResponse {
         this.members = members.stream()
             .map(MemberResponse::new)
             .toList();
+        this.coverImageBase64 = group.getCoverImageBase64();
     }
 
     public Long getId() { return id; }
@@ -51,4 +53,5 @@ public class GroupDetailResponse {
     public GroupStatus getStatus() { return status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public List<MemberResponse> getMembers() { return members; }
+    public String getCoverImageBase64() { return coverImageBase64; }
 }

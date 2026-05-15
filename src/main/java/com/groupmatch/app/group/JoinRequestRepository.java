@@ -20,4 +20,6 @@ public interface JoinRequestRepository extends JpaRepository<JoinRequestEntity, 
                                                     @Param("requestId") Long requestId);
 
     boolean existsByUserIdAndGroupIdAndStatus(Long userId, Long groupId, JoinRequestStatus status);
+
+    boolean existsByUserIdAndGroupId(Long userId, Long groupId);
 }
