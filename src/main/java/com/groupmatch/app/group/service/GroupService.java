@@ -65,7 +65,11 @@ public class GroupService {
         if (request.getJoinPolicy() != null) group.setJoinPolicy(request.getJoinPolicy());
         groupRepository.save(group);
 
-        return new GroupDetailResponse(group, List.of());
+        GroupMemberEntity creatorMembership = new GroupMemberEntity(creator, group);
+        creatorMembership.promote();
+        groupMemberRepository.save(creatorMembership);
+
+        return new GroupDetailResponse(group, List.of(creatorMembership));
     }
 
     @Transactional(readOnly = true)
@@ -163,13 +167,19 @@ public class GroupService {
             userRepository.save(user);
             group.incrementLikes();
             groupRepository.save(group);
+            groupSwipeRepository.save(new GroupSwipeEntity(user, group, liked));
 
             if (group.getStatus() == GroupStatus.ACTIVE) {
                 activateGroupMembers(group);
+                notificationService.create(
+                    group.getCreator(),
+                    "¡Tu grupo está activo!",
+                    "El grupo \"" + group.getName() + "\" alcanzó el mínimo de miembros. ¡El chat ya está disponible!"
+                );
             }
+        } else {
+            groupSwipeRepository.save(new GroupSwipeEntity(user, group, liked));
         }
-
-        groupSwipeRepository.save(new GroupSwipeEntity(user, group, liked));
 
         boolean justActivated = statusBefore == GroupStatus.OPEN && group.getStatus() == GroupStatus.ACTIVE;
         return new SwipeResponse(liked, group.getStatus(), justActivated, user.getDailyLikesLeft());
@@ -323,6 +333,11 @@ public class GroupService {
             if (!groupMemberRepository.existsByUserIdAndGroupId(swipe.getUser().getId(), group.getId())) {
                 groupMemberRepository.save(new GroupMemberEntity(swipe.getUser(), group));
             }
+            notificationService.create(
+                swipe.getUser(),
+                "¡El chat está abierto!",
+                "El grupo \"" + group.getName() + "\" ya tiene suficientes miembros. ¡Empieza a chatear!"
+            );
         }
     }
 

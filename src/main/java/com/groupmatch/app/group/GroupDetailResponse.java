@@ -20,7 +20,7 @@ public class GroupDetailResponse {
     private Integer likesCount;
     private GroupStatus status;
     private LocalDateTime createdAt;
-    private List<MemberSummary> members;
+    private List<MemberResponse> members;
 
     public GroupDetailResponse(GroupEntity group, List<GroupMemberEntity> members) {
         this.id = group.getId();
@@ -36,7 +36,7 @@ public class GroupDetailResponse {
         this.status = group.getStatus();
         this.createdAt = group.getCreatedAt();
         this.members = members.stream()
-            .map(m -> new MemberSummary(m.getUser().getId(), m.getUser().getName(), m.getJoinedAt()))
+            .map(MemberResponse::new)
             .toList();
     }
 
@@ -50,7 +50,5 @@ public class GroupDetailResponse {
     public Integer getLikesCount() { return likesCount; }
     public GroupStatus getStatus() { return status; }
     public LocalDateTime getCreatedAt() { return createdAt; }
-    public List<MemberSummary> getMembers() { return members; }
-
-    public record MemberSummary(Long userId, String name, LocalDateTime joinedAt) {}
+    public List<MemberResponse> getMembers() { return members; }
 }

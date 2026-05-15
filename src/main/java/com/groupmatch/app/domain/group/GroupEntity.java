@@ -78,7 +78,7 @@ public class GroupEntity {
 
     public void incrementLikes() {
         this.likesCount++;
-        if (this.likesCount >= this.minMembers) {
+        if (this.likesCount >= this.minMembers - 1) {
             this.status = GroupStatus.ACTIVE;
         }
     }
