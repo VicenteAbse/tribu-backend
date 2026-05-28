@@ -22,6 +22,7 @@
 - **Base de datos:** PostgreSQL local (`tribu_dev`) — ver sección de BD
 - **Auth:** JWT stateless con JJWT 0.12.3; token en header `Authorization: Bearer <token>`
 - **ORM:** Spring Data JPA / Hibernate con `ddl-auto=update`
+- **WebSocket:** STOMP sobre WebSocket nativo (sin SockJS) — `spring-boot-starter-websocket`
 
 ## Base de datos local
 
@@ -52,13 +53,15 @@ group/          → grupos, swipe, miembros, join requests, eventos, chat
   service/      → GroupService (toda la lógica de negocio)
   GroupRepository, GroupSwipeRepository, GroupMemberRepository,
   JoinRequestRepository, GroupEventRepository
-chat/           → MessageEntity, MessageRepository, ChatController
+chat/           → MessageEntity, MessageRepository, ChatController, ChatService,
+                   ChatNotificationResponse
 notification/   → NotificationEntity, NotificationService
 domain/
   user/         → UserEntity (email, password hash, gender, birthDate, searchRadiusKm, dailyLikesLeft, avatarBase64)
   group/        → GroupEntity, GroupMemberEntity, GroupSwipeEntity,
                    JoinRequestEntity, GroupEventEntity
 common/exception/ → GlobalExceptionHandler (400 con errores por campo en español)
+common/websocket/ → WebSocketConfig, WebSocketAuthChannelInterceptor
 ```
 
 ## Ciclo de vida de un grupo
@@ -120,11 +123,31 @@ GET    /groups/:id/events
 POST   /groups/:id/events
 
 GET    /groups/:id/messages      ?page=&size=
-POST   /groups/:id/messages      { content }
+POST   /groups/:id/messages      { content }   ← también disponible vía STOMP (ver abajo)
 
 PUT    /notifications/:id/read
 POST   /support/reports          { message }
+
+WS     /ws                       endpoint STOMP (handshake HTTP → upgrade)
+STOMP  /app/group/:id/message    enviar mensaje (desde cliente)
+STOMP  /topic/group/:uuid        recibir mensajes en tiempo real (broadcast)
+STOMP  /topic/user/:uuid/notifications  recibir notificaciones de nuevos mensajes
 ```
+
+## Chat en tiempo real (WebSocket + STOMP)
+
+El broker es el **SimpleBroker** de Spring (in-memory). No hay Redis ni broker externo.
+
+**Auth WebSocket:** el cliente manda el JWT en el header `Authorization` del frame STOMP `CONNECT`. `WebSocketAuthChannelInterceptor` lo valida y setea el `Principal` en el `StompHeaderAccessor`. El endpoint `/ws` es público en `SecurityConfig` (el WS maneja su propia auth).
+
+**Flujo al enviar un mensaje** (idéntico vía REST o STOMP):
+1. `ChatService.sendMessage()` guarda en BD
+2. Broadcast `MessageResponse` → `/topic/group/{groupUuid}` (todos en el chat lo reciben)
+3. Por cada miembro del grupo excepto el remitente → `ChatNotificationResponse` a `/topic/user/{userUuid}/notifications` (badge en lista de grupos)
+
+**`ChatNotificationResponse`** es el DTO liviano del topic personal: `groupUuid`, `groupName`, `senderName`, `preview` (máx. 60 chars).
+
+El `@MessageMapping("/group/{groupId}/message")` vive en `ChatController` junto al REST. El `Principal` del argumento es el usuario autenticado vía el interceptor.
 
 ## Convenciones
 

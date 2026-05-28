@@ -7,10 +7,12 @@ import com.groupmatch.app.domain.group.GroupStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 public class GroupDetailResponse {
 
     private Long id;
+    private UUID uuid;
     private String name;
     private String description;
     private String creatorName;
@@ -25,6 +27,7 @@ public class GroupDetailResponse {
 
     public GroupDetailResponse(GroupEntity group, List<GroupMemberEntity> members) {
         this.id = group.getId();
+        this.uuid = group.getUuid();
         this.name = group.getName();
         this.description = group.getDescription();
         this.creatorName = group.getCreator().getName() != null
@@ -43,6 +46,7 @@ public class GroupDetailResponse {
     }
 
     public Long getId() { return id; }
+    public UUID getUuid() { return uuid; }
     public String getName() { return name; }
     public String getDescription() { return description; }
     public String getCreatorName() { return creatorName; }

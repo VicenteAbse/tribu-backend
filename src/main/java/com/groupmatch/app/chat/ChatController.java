@@ -6,10 +6,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.handler.annotation.DestinationVariable;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.UUID;
 
 @RestController
@@ -37,5 +41,14 @@ public class ChatController {
             @Valid @RequestBody SendMessageRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
         return chatService.sendMessage(groupId, request, userDetails.getUsername());
+    }
+
+    // recibe mensajes vía WebSocket/STOMP desde /app/group/{groupId}/message
+    @MessageMapping("/group/{groupId}/message")
+    public void sendMessageWs(
+            @DestinationVariable UUID groupId,
+            @Payload SendMessageRequest request,
+            Principal principal) {
+        chatService.sendMessage(groupId, request, principal.getName());
     }
 }
